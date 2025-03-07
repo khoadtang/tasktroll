@@ -2,8 +2,6 @@
 
 <div align="center">
   
-TaskTroll Logo
-
 **A smart todo list with an AI coach that helps keep you accountable**
 
 </div>
@@ -23,19 +21,36 @@ TaskTroll is a Chrome extension that combines a modern todo list manager with AI
 
 ## 📸 Screenshots
 
-<div align="center">
-
-### Main Chat Interface
-TaskTroll automatically detects tasks from natural language and creates trackable items.
-
-<img src="screenshots/task_chat.png" alt="TaskTroll Chat Interface" width="400"/>
-
-### AI Configuration
-Connect to your preferred AI provider to enable smart task detection and coaching.
-
-<img src="screenshots/ai_settings.png" alt="TaskTroll AI Settings" width="400"/>
-
-</div>
+<table>
+  <tr>
+    <td align="center" width="50%">
+      <h3>
+        ✨ Smart Chat Interface
+      </h3>
+      <p>AI-powered task detection from natural conversations</p>
+      <kbd>
+        <a href="screenshots/task_chat.png">
+          <img src="screenshots/task_chat.png" width="100%" alt="TaskTroll Chat Interface" />
+        </a>
+      </kbd>
+      <br/>
+      <sup>Natural language processing extracts tasks automatically</sup>
+    </td>
+    <td align="center" width="50%">
+      <h3>
+        ⚙️ AI Configuration
+      </h3>
+      <p>Connect to multiple AI providers for intelligent coaching</p>
+      <kbd>
+        <a href="screenshots/ai_settings.png">
+          <img src="screenshots/ai_settings.png" width="100%" alt="AI Configuration" />
+        </a>
+      </kbd>
+      <br/>
+      <sup>Supports OpenAI, Gemini, DeepSeek and OpenRouter</sup>
+    </td>
+  </tr>
+</table>
 
 ## 🛠️ Installation
 
