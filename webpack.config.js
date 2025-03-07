@@ -14,7 +14,7 @@ module.exports = {
   module: {
     rules: [
       {
-        test: /\.(ts|tsx)$/,
+        test: /\.tsx?$/,
         use: 'ts-loader',
         exclude: /node_modules/,
       },
@@ -33,13 +33,13 @@ module.exports = {
   },
   plugins: [
     new HtmlWebpackPlugin({
-      template: path.resolve(__dirname, 'src', 'popup.html'),
-      filename: 'popup.html'
+      template: './src/popup.html',
+      filename: 'popup.html',
     }),
     new CopyPlugin({
       patterns: [
-        { from: "manifest.json" },
-        { from: "public" },
+        { from: 'manifest.json', to: 'manifest.json' },
+        { from: 'public', to: './' },
       ],
     }),
   ],

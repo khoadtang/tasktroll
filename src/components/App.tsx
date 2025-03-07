@@ -153,10 +153,9 @@ const AISettingsButton = styled.button`
 const ChatContainer = styled.div`
   flex: 1;
   overflow-y: auto;
-  padding: 10px;
+  padding: 12px 8px;
   display: flex;
   flex-direction: column;
-  gap: 8px;
   
   &::-webkit-scrollbar {
     width: 4px;
@@ -243,9 +242,12 @@ const SendButton = styled.button`
 // Update message components with modern design
 const Message = styled.div<{ isBot: boolean }>`
   display: flex;
-  margin-bottom: 12px;
+  margin-bottom: 16px;
   justify-content: ${props => props.isBot ? 'flex-start' : 'flex-end'};
   width: 100%;
+  flex-direction: ${props => props.isBot ? 'row' : 'row-reverse'};
+  padding: 0;
+  align-items: flex-start;
 `;
 
 const Avatar = styled.div<{ isBot: boolean }>`
@@ -259,10 +261,8 @@ const Avatar = styled.div<{ isBot: boolean }>`
   justify-content: center;
   font-weight: 600;
   font-size: 12px;
-  margin-right: ${props => props.isBot ? '8px' : '0'};
-  margin-left: ${props => props.isBot ? '0' : '8px'};
+  margin: ${props => props.isBot ? '0 8px 0 0' : '0 0 0 8px'};
   flex-shrink: 0;
-  order: ${props => props.isBot ? 0 : 1};
 `;
 
 // Update Todo container for a more compact, modern look
@@ -271,29 +271,26 @@ const TodoContainer = styled.div`
   flex-direction: column;
   width: 100%;
   margin-bottom: 8px;
-  background: rgba(26, 32, 44, 0.4);
-  border-radius: 18px;
-  padding: 12px;
+  background: rgba(26, 32, 44, 0.6);
+  border-radius: 12px;
+  padding: 14px;
   backdrop-filter: blur(8px);
   border: 1px solid rgba(66, 68, 101, 0.3);
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.15);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
 `;
 
 // Update the TodoListTitle for a more compact, modern look
 const TodoListTitle = styled.div`
   font-weight: 600;
-  margin-bottom: 8px;
+  margin-bottom: 10px;
   color: #a5b4fc;
+  font-size: 15px;
   display: flex;
   align-items: center;
-  font-size: 14px;
-  padding: 0 4px 8px;
-  border-bottom: 1px solid rgba(75, 85, 99, 0.2);
   
   &::before {
     content: '📋';
-    margin-right: 6px;
-    font-size: 14px;
+    margin-right: 8px;
   }
 `;
 
@@ -302,55 +299,25 @@ const TodoItem = styled.div<{ completed: boolean }>`
   display: flex;
   align-items: center;
   padding: 10px 12px;
-  border-radius: 12px;
-  background: ${props => props.completed ? 'rgba(79, 70, 229, 0.08)' : 'rgba(30, 41, 59, 0.3)'};
-  border: 1px solid ${props => props.completed ? 'rgba(79, 70, 229, 0.2)' : 'rgba(66, 68, 101, 0.1)'};
+  border-radius: 10px;
+  background: ${props => props.completed ? 'rgba(79, 70, 229, 0.08)' : 'rgba(30, 41, 59, 0.6)'};
+  border: 1px solid ${props => props.completed ? 'rgba(79, 70, 229, 0.2)' : 'rgba(66, 68, 101, 0.2)'};
   cursor: pointer;
   transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-  margin-bottom: 6px;
+  margin-bottom: 8px;
   position: relative;
   overflow: hidden;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
   
   &:last-child {
     margin-bottom: 0;
   }
   
   &:hover {
-    background: ${props => props.completed ? 'rgba(79, 70, 229, 0.12)' : 'rgba(30, 41, 59, 0.5)'};
-    transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+    background: ${props => props.completed ? 'rgba(79, 70, 229, 0.1)' : 'rgba(30, 41, 59, 0.7)'};
   }
-  
-  &:active {
-    transform: translateY(0);
-    background: ${props => props.completed ? 'rgba(79, 70, 229, 0.15)' : 'rgba(30, 41, 59, 0.6)'};
-  }
-  
-  &::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.05), transparent);
-    transform: translateX(-100%);
-    transition: transform 0.5s ease;
-  }
-  
-  &:hover::before {
-    transform: translateX(100%);
-  }
-  
-  ${props => props.completed && `
-    animation: complete-task 0.5s forwards;
-    
-    @keyframes complete-task {
-      0% { transform: translateY(0); }
-      50% { transform: translateY(-4px); }
-      100% { transform: translateY(0); }
-    }
-  `}
 `;
 
 // More compact and modern checkbox with enhanced animations
@@ -448,11 +415,15 @@ const MessageBubble = styled.div<{ isBot: boolean }>`
   border-bottom-right-radius: ${props => !props.isBot ? '4px' : '16px'};
   padding: 10px 14px;
   backdrop-filter: blur(10px);
-  max-width: 75%;
+  width: auto;
+  max-width: 90%;
   color: #f3f4f6;
   line-height: 1.4;
   position: relative;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  word-break: break-word;
+  margin-left: ${props => props.isBot ? '0' : 'auto'};
+  margin-right: ${props => !props.isBot ? '0' : 'auto'};
 `;
 
 // Update the command hint
@@ -1096,7 +1067,7 @@ const App: React.FC = () => {
     console.log('App initialization starting...');
     
     try {
-      // Load saved messages
+      // Try to load from localStorage for simplicity
       const savedMessages = localStorage.getItem('messages');
       if (savedMessages) {
         const parsedMessages = JSON.parse(savedMessages);
@@ -1144,7 +1115,7 @@ const App: React.FC = () => {
     
     return () => clearTimeout(timer);
   }, []);
-  
+
   // Save messages to localStorage when they change
   useEffect(() => {
     try {
@@ -1283,7 +1254,40 @@ const App: React.FC = () => {
       }
     }
     else if (input === 'help') {
-      addBotMessageSimple("Các lệnh: 'add [công việc]', 'list', 'delete [số thứ tự]', 'help'. Bạn cũng có thể nhắn tin bình thường và tôi sẽ phân tích xem có công việc nào cần làm không.");
+      addBotMessageSimple("Các lệnh: 'add [công việc]', 'list', 'delete [số thứ tự]', 'clear' (xóa tất cả công việc), 'clearall' (xóa tất cả công việc và tin nhắn), 'help'. Bạn cũng có thể nhắn tin bình thường và tôi sẽ phân tích xem có công việc nào cần làm không.");
+    }
+    else if (input === 'clear') {
+      if (todos.length === 0) {
+        addBotMessageSimple("Bạn chưa có công việc nào để xóa.");
+      } else {
+        const taskCount = todos.length;
+        setTodos([]);
+        addBotMessageSimple(`🧹 Đã xóa tất cả ${taskCount} công việc.`);
+      }
+    }
+    else if (input === 'clearall') {
+      // Clear all tasks
+      const taskCount = todos.length;
+      setTodos([]);
+      
+      // Create welcome message
+      const welcomeMsg: ChatMessage = {
+        id: Date.now().toString(),
+        text: "Xin chào! Tôi là Task Chat, trợ lý giúp bạn quản lý công việc một cách hiệu quả. Hãy tạo công việc đầu tiên bằng cách nhập 'add [công việc]'.",
+        isBot: true,
+        timestamp: Date.now()
+      };
+      
+      // Create confirmation message
+      const confirmMsg: ChatMessage = {
+        id: (Date.now() + 1).toString(),
+        text: `🧹 Đã xóa tất cả ${taskCount} công việc và lịch sử tin nhắn.`,
+        isBot: true,
+        timestamp: Date.now() + 1
+      };
+      
+      // Set messages to welcome message, user command, and confirmation
+      setMessages([welcomeMsg, userMessage, confirmMsg]);
     }
     else {
       // Try simple task detection for direct messages first
