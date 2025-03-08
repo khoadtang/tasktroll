@@ -14,19 +14,7 @@ import {
   formatTaskDetectionPrompt,
 } from '../localization/vi';
 import { formatString, getRandomItem } from '../utils/stringUtils';
-
-interface Todo {
-  id: string;
-  text: string;
-  completed: boolean;
-  deadline?: string;
-  category?: string; // Task category determined by AI
-  lastChecked?: number; // Last time AI checked this task
-  customBlameMessages?: string[]; // Custom blame messages for this task type
-  timeExpired?: boolean; // Flag for tasks that have expired
-  remainingTime?: number; // Remaining time for tasks that have expired
-  created?: number; // Creation time for tasks that have expired
-}
+import { Todo, AIConfig } from '../types/shared';
 
 interface ChatMessage {
   id: string;
@@ -36,16 +24,6 @@ interface ChatMessage {
   todo?: Todo; // Optional todo item to display in chat
   isTodoList?: boolean; // Flag for messages that contain the todo list
   isProcessing?: boolean; // Flag for messages that are processing
-}
-
-interface AIConfig {
-  provider: 'openai' | 'gemini' | 'deepseek' | 'openrouter' | null;
-  apiKey: string;
-  enabled: boolean;
-  lastCheck: number;
-  autoDetectTasks: boolean;
-  endpoint: string; // API endpoint to call
-  model: string;    // Model name to use
 }
 
 // Animations - with reduced motion (even more reduced to prevent display issues)
@@ -106,6 +84,30 @@ const Header = styled.div`
   backdrop-filter: blur(8px);
   border-bottom: 1px solid rgba(66, 68, 101, 0.2);
   z-index: 10;
+`;
+
+// Test notification button with better visibility
+const TestNotificationButton = styled.button`
+  background: #4338ca;
+  border: none;
+  border-radius: 4px;
+  color: white;
+  font-size: 14px;
+  font-weight: 500;
+  padding: 8px 12px;
+  margin: 8px auto;
+  display: block;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  
+  &:hover {
+    background: #4f46e5;
+    transform: translateY(-1px);
+  }
+  
+  &:active {
+    transform: translateY(1px);
+  }
 `;
 
 // Update AppTitle to match modern apps
@@ -714,18 +716,69 @@ interface SafeParseResult {
   blameMessages?: string[];
 }
 
+// Add a helper component to request notification permission
+const NotificationPermissionRequest = () => {
+  const [permission, setPermission] = useState<string>(Notification.permission);
+  
+  const requestPermission = async () => {
+    try {
+      const result = await Notification.requestPermission();
+      setPermission(result);
+      if (result === 'granted') {
+        // Show a sample notification to confirm it works
+        new Notification('Notifications Enabled', {
+          body: 'You will now receive notifications for overdue tasks'
+        });
+      }
+    } catch (error) {
+      console.error('Error requesting notification permission:', error);
+    }
+  };
+  
+  if (permission === 'granted') return null;
+  
+  return (
+    <div style={{
+      padding: '10px 15px',
+      margin: '0 0 10px 0',
+      backgroundColor: '#ff5252',
+      color: 'white',
+      borderRadius: '8px',
+      textAlign: 'center'
+    }}>
+      <div style={{ fontWeight: 'bold', marginBottom: '8px' }}>
+        Notifications are disabled
+      </div>
+      <div style={{ marginBottom: '10px', fontSize: '14px' }}>
+        Please enable notifications to get reminders for your tasks
+      </div>
+      <button 
+        onClick={requestPermission}
+        style={{
+          backgroundColor: 'white',
+          color: '#ff5252',
+          border: 'none',
+          padding: '8px 16px',
+          borderRadius: '4px',
+          fontWeight: 'bold',
+          cursor: 'pointer'
+        }}
+      >
+        Enable Notifications
+      </button>
+    </div>
+  );
+};
+
 const App: React.FC = () => {
   const [todos, setTodos] = useState<Todo[]>(() => {
     try {
-      // Load saved todos from localStorage
-      const savedTodos = localStorage.getItem('todos');
-      if (savedTodos) {
-        return JSON.parse(savedTodos);
-      }
+      // Initialize with empty array, we'll load from Chrome storage
+      return [];
     } catch (error) {
-      console.error('Error loading todos from localStorage:', error);
+      console.error('Error initializing todos:', error);
+      return [];
     }
-    return [];
   });
   const [inputValue, setInputValue] = useState('');
   const [messages, setMessages] = useState<ChatMessage[]>([]);
@@ -739,15 +792,7 @@ const App: React.FC = () => {
   
   // Add AI config state
   const [aiConfig, setAIConfig] = useState<AIConfig>(() => {
-    try {
-      // Load saved AI config
-      const savedConfig = localStorage.getItem('aiConfig');
-      if (savedConfig) {
-        return JSON.parse(savedConfig);
-      }
-    } catch (error) {
-      console.error('Error loading AI config:', error);
-    }
+    // Initialize with default values, we'll load from Chrome storage
     return {
       provider: null,
       apiKey: '',
@@ -760,14 +805,143 @@ const App: React.FC = () => {
   });
   const [showAISettings, setShowAISettings] = useState(false);
   
-  // Save AI config when it changes
+  // Add state for notification permission
+  const [notificationPermission, setNotificationPermission] = useState<string | null>(null);
+  
+  // Load todos and AI config from Chrome storage when app starts
   useEffect(() => {
-    try {
-      localStorage.setItem('aiConfig', JSON.stringify(aiConfig));
-    } catch (error) {
-      console.error('Error saving AI config:', error);
+    const loadData = async () => {
+      try {
+        // Notify background script that popup is opened
+        try {
+          chrome.runtime.sendMessage({ type: 'POPUP_OPENED' });
+        } catch (error) {
+          console.error('Error sending popup opened message:', error);
+        }
+
+        const data = await chrome.storage.local.get([
+          'todos', 
+          'aiConfig', 
+          'pendingBlameMessages'
+        ]);
+        
+        // Check for and display any pending blame messages
+        if (data.pendingBlameMessages && Array.isArray(data.pendingBlameMessages) && data.pendingBlameMessages.length > 0) {
+          console.log('Found pending blame messages:', data.pendingBlameMessages);
+          
+          // Display each message in the chat
+          data.pendingBlameMessages.forEach(message => {
+            addBotMessageSimple(message.message);
+          });
+          
+          // Clear pending messages after displaying
+          await chrome.storage.local.set({ pendingBlameMessages: [] });
+        }
+        
+        if (data.todos && Array.isArray(data.todos)) {
+          setTodos(data.todos);
+        } else {
+          // Try to load from localStorage for backward compatibility
+          const savedTodos = localStorage.getItem('todos');
+          if (savedTodos) {
+            const parsedTodos = JSON.parse(savedTodos);
+            setTodos(parsedTodos);
+            // Also save to Chrome storage
+            await chrome.storage.local.set({ todos: parsedTodos });
+          }
+        }
+        
+        if (data.aiConfig) {
+          setAIConfig(data.aiConfig);
+        } else {
+          // Try to load from localStorage for backward compatibility
+          const savedConfig = localStorage.getItem('aiConfig');
+          if (savedConfig) {
+            const parsedConfig = JSON.parse(savedConfig);
+            setAIConfig(parsedConfig);
+            // Also save to Chrome storage
+            await chrome.storage.local.set({ aiConfig: parsedConfig });
+          }
+        }
+        
+        // Check if we need to show a notification
+        if (data.showNotification) {
+          console.log('Found notification to show:', data.showNotification);
+          
+          // Request permission to show notification
+          if (Notification.permission !== 'granted') {
+            const permission = await Notification.requestPermission();
+            console.log('Notification permission:', permission);
+          }
+          
+          if (Notification.permission === 'granted') {
+            try {
+              const notification = new Notification(data.showNotification.title, {
+                body: data.showNotification.message,
+                icon: '/icon128.png'
+              });
+              
+              notification.onclick = () => {
+                console.log('Notification clicked');
+                window.focus();
+              };
+              
+              console.log('Notification created:', notification);
+            } catch (error) {
+              console.error('Error creating notification:', error);
+            }
+          }
+          
+          // Clear the notification data
+          await chrome.storage.local.set({ showNotification: null });
+        }
+        
+        setIsLoading(false);
+      } catch (error) {
+        console.error('Error loading data from Chrome storage:', error);
+        setIsLoading(false);
+      }
+    };
+    
+    loadData();
+  }, []);
+  
+  // Save todos to Chrome storage when they change
+  useEffect(() => {
+    if (todos.length > 0 || !isLoading) {
+      try {
+        chrome.storage.local.set({ todos });
+        // Also save to localStorage for backward compatibility
+        localStorage.setItem('todos', JSON.stringify(todos));
+      } catch (error) {
+        console.error('Error saving todos to Chrome storage:', error);
+      }
     }
-  }, [aiConfig]);
+  }, [todos, isLoading]);
+  
+  // Save AI config to Chrome storage when it changes
+  useEffect(() => {
+    if (!isLoading) {
+      try {
+        chrome.storage.local.set({ aiConfig });
+        // Also save to localStorage for backward compatibility
+        localStorage.setItem('aiConfig', JSON.stringify(aiConfig));
+      } catch (error) {
+        console.error('Error saving AI config to Chrome storage:', error);
+      }
+    }
+  }, [aiConfig, isLoading]);
+  
+  // Notify background script when tasks are added or modified
+  useEffect(() => {
+    if (!isLoading && todos.length > 0) {
+      try {
+        chrome.runtime.sendMessage({ type: 'CHECK_TASKS_NOW' });
+      } catch (error) {
+        console.error('Error sending message to background script:', error);
+      }
+    }
+  }, [todos, isLoading]);
   
   // Function to safely generate blame messages with AI
   const generateBlameMessage = async (task: { text: string, category?: string, completed: boolean, id: string }): Promise<BlameMessageResult> => {
@@ -1126,17 +1300,6 @@ const App: React.FC = () => {
       console.error('Error saving messages to localStorage:', error);
     }
   }, [messages]);
-  
-  // Save todos to localStorage when they change
-  useEffect(() => {
-    try {
-      if (todos.length > 0) {
-        localStorage.setItem('todos', JSON.stringify(todos));
-      }
-    } catch (error) {
-      console.error('Error saving todos to localStorage:', error);
-    }
-  }, [todos]);
   
   // Simple function to add a message from the bot
   const addBotMessageSimple = (text: string) => {
@@ -1845,6 +2008,62 @@ const App: React.FC = () => {
     return false;
   };
 
+  // Add effect to check notification permission
+  useEffect(() => {
+    const checkPermission = async () => {
+      // Check if the browser supports notifications
+      if ('Notification' in window) {
+        setNotificationPermission(Notification.permission);
+      }
+    };
+    
+    checkPermission();
+  }, []);
+
+  // Function to request notification permission
+  const requestNotificationPermission = async () => {
+    try {
+      const permission = await Notification.requestPermission();
+      setNotificationPermission(permission);
+      console.log('Notification permission:', permission);
+      
+      // If granted, show a test notification
+      if (permission === 'granted') {
+        new Notification('Notifications Enabled', {
+          body: 'You will now receive notifications for overdue tasks!',
+          icon: '/icon128.png'
+        });
+      }
+    } catch (error) {
+      console.error('Error requesting notification permission:', error);
+    }
+  };
+
+  // Test notification that works 100% of the time (user gesture context)
+  const testNotification = () => {
+    // Clear any existing badge first
+    chrome.action.setBadgeText({ text: '' });
+    
+    // Generate a nice test message
+    const testMessage = "🔄 Test notification with badge and notification!";
+    
+    // Show in chat immediately
+    addBotMessageSimple("🔔 " + testMessage);
+    
+    // Send request to background.js to trigger notification
+    // This ensures we use exactly the same code path as the automated notifications
+    chrome.runtime.sendMessage({ 
+      action: 'testNotification', 
+      message: testMessage 
+    }, (response) => {
+      if (chrome.runtime.lastError) {
+        console.error('Error requesting test notification:', chrome.runtime.lastError);
+      } else {
+        console.log('Test notification request sent:', response);
+      }
+    });
+  };
+
   // Modified render to include todo list display
   return (
     <>
@@ -1859,6 +2078,8 @@ const App: React.FC = () => {
             </svg>
           </AISettingsButton>
         </Header>
+        
+        <NotificationPermissionRequest />
         
         <ChatContainer ref={chatContainerRef}>
           {messages.map((message) => (
@@ -2000,7 +2221,7 @@ const App: React.FC = () => {
                     model = 'google/gemini-flash-1.5-8b';
                   }
                   
-                  setAIConfig(prev => ({
+                  setAIConfig((prev: AIConfig) => ({
                     ...prev,
                     provider: provider as AIConfig['provider'],
                     endpoint,
@@ -2021,7 +2242,7 @@ const App: React.FC = () => {
               <AISettingsInput
                 type="password"
                 value={aiConfig.apiKey}
-                onChange={(e) => setAIConfig(prev => ({
+                onChange={(e) => setAIConfig((prev: AIConfig) => ({
                   ...prev,
                   apiKey: e.target.value
                 }))}
@@ -2035,7 +2256,7 @@ const App: React.FC = () => {
                 <input 
                   type="checkbox" 
                   checked={aiConfig.enabled}
-                  onChange={(e) => setAIConfig(prev => ({
+                  onChange={(e) => setAIConfig((prev: AIConfig) => ({
                     ...prev,
                     enabled: e.target.checked
                   }))}
@@ -2050,7 +2271,7 @@ const App: React.FC = () => {
                 <input 
                   type="checkbox" 
                   checked={aiConfig.autoDetectTasks}
-                  onChange={(e) => setAIConfig(prev => ({
+                  onChange={(e) => setAIConfig((prev: AIConfig) => ({
                     ...prev,
                     autoDetectTasks: e.target.checked
                   }))}

@@ -5,7 +5,9 @@
   "description": "A todo list with an AI coach that helps keep you accountable",
   "permissions": [
     "storage",
-    "activeTab"
+    "alarms",
+    "tabs",
+    "notifications"
   ],
   "host_permissions": [
     "https://api.openai.com/*",
@@ -17,14 +19,24 @@
     "default_icon": {
       "16": "icon16.png",
       "48": "icon48.png",
-      "128": "icon128.png"
+      "128": "icon128.png",
+      "19": "icon16.png"
     }
+  },
+  "background": {
+    "service_worker": "background.js"
   },
   "icons": {
     "16": "icon16.png",
     "48": "icon48.png",
     "128": "icon128.png"
   },
+  "web_accessible_resources": [
+    {
+      "resources": ["icon16.png", "icon48.png", "icon128.png", "proper-icon128.png", "notification-icon.png", "popup.html"],
+      "matches": ["<all_urls>"]
+    }
+  ],
   "content_security_policy": {
     "extension_pages": "script-src 'self'; object-src 'self'"
   }

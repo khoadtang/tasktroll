@@ -4,10 +4,13 @@ const CopyPlugin = require('copy-webpack-plugin');
 
 module.exports = {
   mode: 'development',
-  entry: './src/index.tsx',
+  entry: {
+    popup: './src/index.tsx',
+    background: './src/background.ts'
+  },
   output: {
     path: path.resolve(__dirname, 'dist'),
-    filename: 'bundle.js',
+    filename: '[name].js',
     clean: true
   },
   devtool: 'inline-source-map',
@@ -35,6 +38,7 @@ module.exports = {
     new HtmlWebpackPlugin({
       template: './src/popup.html',
       filename: 'popup.html',
+      chunks: ['popup']
     }),
     new CopyPlugin({
       patterns: [
