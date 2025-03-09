@@ -868,32 +868,25 @@ const App: React.FC = () => {
         if (data.showNotification) {
           console.log('Found notification to show:', data.showNotification);
           
-          // Request permission to show notification
-          if (Notification.permission !== 'granted') {
-            const permission = await Notification.requestPermission();
-            console.log('Notification permission:', permission);
-          }
+          // Instead of using browser notifications, display in the app
+          const notificationMessage = data.showNotification.message;
+          // Use normal chat message to display notification
+          addBotMessageSimple(`🚨 ${notificationMessage}`);
           
-          if (Notification.permission === 'granted') {
-            try {
-              const notification = new Notification(data.showNotification.title, {
-                body: data.showNotification.message,
-                icon: '/icon128.png'
-              });
-              
-              notification.onclick = () => {
-                console.log('Notification clicked');
-                window.focus();
-              };
-              
-              console.log('Notification created:', notification);
-            } catch (error) {
-              console.error('Error creating notification:', error);
+          // Mark as displayed
+          const pendingBlameMessages = data.pendingBlameMessages || [];
+          const updatedMessages = pendingBlameMessages.map((msg: any) => {
+            if (msg.message === notificationMessage) {
+              return { ...msg, displayed: true };
             }
-          }
+            return msg;
+          });
           
-          // Clear the notification data
-          await chrome.storage.local.set({ showNotification: null });
+          // Update storage
+          await chrome.storage.local.set({ 
+            pendingBlameMessages: updatedMessages,
+            showNotification: null // Clear the notification
+          });
         }
         
         setIsLoading(false);
@@ -1114,20 +1107,68 @@ const App: React.FC = () => {
       // Clean up any extra text around the JSON
       text = text.replace(/^[^{]*/, '').replace(/[^}]*$/, '');
       
-      // Try to fix common JSON issues
-      // 1. Fix unescaped quotes within strings
-      text = text.replace(/"([^"]*)"([^"]*)"([^"]*)"/g, '"$1\\"$2\\"$3"');
+      // Complete sanitization of the JSON string to ensure it's valid
+      let sanitizedText = '';
+      let inString = false;
+      let escape = false;
       
-      // 2. Fix missing commas between array items
-      text = text.replace(/"\s*"/g, '", "');
+      // Character-by-character sanitization
+      for (let i = 0; i < text.length; i++) {
+        const char = text[i];
+        
+        // Handle string boundary and escape sequences
+        if (char === '"' && !escape) {
+          inString = !inString;
+          sanitizedText += char;
+        } 
+        // Handle escape character
+        else if (char === '\\' && !escape) {
+          escape = true;
+          sanitizedText += char;
+        }
+        // Handle characters inside strings - remove control characters
+        else if (inString) {
+          // Skip control characters completely
+          if (char >= '\u0000' && char <= '\u001F') {
+            // Skip the character
+          }
+          // Handle escaped characters properly
+          else if (escape) {
+            // Only allow valid escape sequences
+            if ('"\\/bfnrt'.includes(char)) {
+              sanitizedText += char;
+            } else {
+              // Skip invalid escape sequences
+            }
+            escape = false;
+          }
+          // Normal characters within strings
+          else {
+            sanitizedText += char;
+          }
+        }
+        // Handle characters outside strings
+        else {
+          // Only allow valid JSON structural characters outside strings
+          if (/^[\{\}\[\]:,\s0-9.\-+]$/.test(char)) {
+            sanitizedText += char;
+          }
+          escape = false;
+        }
+      }
       
-      // 3. Fix trailing commas in arrays
-      text = text.replace(/,\s*]/g, ']');
+      // Ensure strings are properly closed
+      if (inString) {
+        sanitizedText += '"';
+      }
       
-      // Try standard JSON parse with fixes
+      console.log('Original JSON text:', text);
+      console.log('Sanitized JSON text:', sanitizedText);
+      
+      // Try parsing the sanitized JSON
       try {
-        const parsedJson = JSON.parse(text);
-        console.log('Successfully parsed JSON:', parsedJson);
+        const parsedJson = JSON.parse(sanitizedText);
+        console.log('Successfully parsed sanitized JSON:', parsedJson);
         
         // Handle different response formats - look for blameMessages or trollReminders
         if (parsedJson.blameMessages) {
@@ -1348,6 +1389,14 @@ const App: React.FC = () => {
     }));
     
     if (completed) {
+      // Send message to background script to clear notifications for this task
+      chrome.runtime.sendMessage({
+        action: 'taskCompleted',
+        taskId: id
+      }, (response) => {
+        console.log('Background response to task completion:', response);
+      });
+      
       addBotMessageSimple(`✅ Great job! You've completed a task.`);
     }
   };
@@ -2054,7 +2103,8 @@ const App: React.FC = () => {
     // This ensures we use exactly the same code path as the automated notifications
     chrome.runtime.sendMessage({ 
       action: 'testNotification', 
-      message: testMessage 
+      message: testMessage,
+      taskId: 'test-' + Date.now() // Add a unique test task ID
     }, (response) => {
       if (chrome.runtime.lastError) {
         console.error('Error requesting test notification:', chrome.runtime.lastError);
