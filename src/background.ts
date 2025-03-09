@@ -607,6 +607,10 @@ chrome.runtime.onConnect.addListener((port) => {
     
     // Just clear the badge when popup opens
     chrome.action.setBadgeText({ text: '' });
+    
+    // Also check for expired tasks when popup opens
+    console.log('Popup opened - checking tasks');
+    checkTasks();
   }
 });
 
