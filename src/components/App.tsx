@@ -1,5 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import styled from '@emotion/styled';
+import { keyframes } from '@emotion/react';
+import TaskCompletionAnimation from './TaskCompletionAnimation';
 import {
   TaskDetectionResult,
   BlameMessageResult,
@@ -808,6 +810,9 @@ const App: React.FC = () => {
   // Add state for notification permission
   const [notificationPermission, setNotificationPermission] = useState<string | null>(null);
   
+  // Add state for completed task animation
+  const [completedTaskId, setCompletedTaskId] = useState<string | null>(null);
+  
   // Load todos and AI config from Chrome storage when app starts
   useEffect(() => {
     const loadData = async () => {
@@ -1381,14 +1386,25 @@ const App: React.FC = () => {
   
   // Function to handle task completion
   const handleTaskCompletion = (id: string, completed: boolean) => {
-    setTodos(prev => prev.map(todo => {
-      if (todo.id === id) {
-        return { ...todo, completed };
-      }
-      return todo;
-    }));
+    console.log('Task completion triggered', { id, completed });
+    
+    setTodos(prev => {
+      const newTodos = prev.map(todo => {
+        if (todo.id === id) {
+          console.log('Found matching todo for completion', todo);
+          return { ...todo, completed };
+        }
+        return todo;
+      });
+      console.log('Updated todos array', newTodos);
+      return newTodos;
+    });
     
     if (completed) {
+      console.log('Setting completedTaskId to trigger animation', id);
+      // Show celebration animation
+      setCompletedTaskId(id);
+      
       // Send message to background script to clear notifications for this task
       chrome.runtime.sendMessage({
         action: 'taskCompleted',
@@ -1397,6 +1413,7 @@ const App: React.FC = () => {
         console.log('Background response to task completion:', response);
       });
       
+      // Add a congratulatory message
       addBotMessageSimple(`✅ Great job! You've completed a task.`);
     }
   };
@@ -2335,6 +2352,17 @@ const App: React.FC = () => {
             </AISaveButton>
           </AISettingsGroup>
         </AISettingsModal>
+        
+        {/* Show task completion animation */}
+        {completedTaskId && (
+          <TaskCompletionAnimation
+            onAnimationEnd={() => {
+              console.log('Animation ended, clearing completedTaskId');
+              setCompletedTaskId(null);
+            }}
+          />
+        )}
+        
       </Container>
     </>
   );
