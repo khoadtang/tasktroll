@@ -350,13 +350,28 @@ const pushNotificationImmediately = (message: string, taskId?: string) => {
     // Also store for popup display
     chrome.storage.local.set({
       showNotification: {
-        title: 'Task Alert',
+        title: title, // Use the randomly selected Vietnamese title
         message: message,
         timestamp: Date.now(),
         taskId: taskId
       }
     });
   });
+  
+  // Duolingo-style engaging titles with emojis in Vietnamese
+  const engagingTitles = [
+    '🔥 Hết Giờ Rồi! ⏰',
+    '⚠️ Nhiệm Vụ Đang Chờ! ⚠️',
+    '📊 Kiểm Tra Năng Suất! 📈',
+    '⚡ Tập Trung Nào! ⚡',
+    '🚨 Đã Đến Hạn! 🚨',
+    '🎯 Mục Tiêu Của Bạn! ⏰',
+    '🔔 Nhắc Nhở Quan Trọng! 🔔',
+    '⏰ Thời Gian Đã Hết! 🔥'
+  ];
+  
+  // Randomly select an engaging title
+  const title = getRandomItem(engagingTitles);
   
   // Use direct Chrome notification with data URL icon (most successful approach)
   try {
@@ -370,7 +385,7 @@ const pushNotificationImmediately = (message: string, taskId?: string) => {
     chrome.notifications.create(notificationId, {
       type: 'basic',
       iconUrl: simpleIconBase64, 
-      title: 'Task Alert',
+      title: title, // Use the Vietnamese title
       message: message
     }, (createdId) => {
       if (chrome.runtime.lastError) {
@@ -381,7 +396,7 @@ const pushNotificationImmediately = (message: string, taskId?: string) => {
         chrome.notifications.create(notificationId + '_noicon', {
           type: 'basic',
           iconUrl: '', // Empty string to satisfy the type requirement
-          title: 'Task Alert',
+          title: title, // Use the Vietnamese title
           message: message
         }, (finalId) => {
           if (chrome.runtime.lastError) {
@@ -654,4 +669,16 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 });
 
 // Initial check on startup
-checkTasks(); 
+checkTasks();
+
+// Duolingo-style engaging titles with emojis in Vietnamese
+const engagingTitles = [
+  '🔥 Hết Giờ Rồi! ⏰',
+  '⚠️ Nhiệm Vụ Đang Chờ! ⚠️',
+  '📊 Kiểm Tra Năng Suất! 📈',
+  '⚡ Tập Trung Nào! ⚡',
+  '🚨 Đã Đến Hạn! 🚨',
+  '🎯 Mục Tiêu Của Bạn! ⏰',
+  '🔔 Nhắc Nhở Quan Trọng! 🔔',
+  '⏰ Thời Gian Đã Hết! 🔥'
+]; 
